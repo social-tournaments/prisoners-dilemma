@@ -82,6 +82,9 @@ for (let i = 0; i < strategies.length; i++) {
     console.log(`  Playing ${strat1.name} vs ${strat2.name}...`);
     const { score1, score2 } = playGame(strat1.instance, strat2.instance);
 
+    console.log(`    ${strat1.name} score: ${score1}`);
+    console.log(`    ${strat2.name} score: ${score2}`);
+
     strat1.totalScore += score1;
     strat2.totalScore += score2;
   }
