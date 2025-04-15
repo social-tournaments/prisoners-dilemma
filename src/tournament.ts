@@ -9,6 +9,13 @@ interface StrategyInfo {
   totalScore: number;
 }
 
+// Define a type for the head-to-head scores matrix
+type HeadToHeadScores = {
+  [strategyName: string]: {
+    [opponentName: string]: number;
+  };
+};
+
 const strategiesDir = path.join(__dirname, "strategies");
 const strategyFiles = fs
   .readdirSync(strategiesDir)
@@ -29,7 +36,7 @@ for (const file of strategyFiles) {
     // Try finding the class directly by expected name or as default export
     let StrategyClass = module[expectedClassName];
 
-    // If not found by name, check if it's the default export (CommonJS interop)
+    // If not found by name, check if it\'s the default export (CommonJS interop)
     if (!StrategyClass && module.default) {
       // Check if default export itself is the class OR if the class is a property of default
       if (
@@ -68,14 +75,17 @@ for (const file of strategyFiles) {
   }
 }
 
+// Initialize head-to-head scores structure
+const headToHeadScores: HeadToHeadScores = {};
+strategies.forEach((strat) => {
+  headToHeadScores[strat.name] = {};
+});
+
 // Run the tournament
 console.log("\nRunning tournament...");
 for (let i = 0; i < strategies.length; i++) {
-  for (let j = i; j < strategies.length; j++) {
-    if (i === j) {
-      continue; // Skip self-play
-    }
-
+  for (let j = i + 1; j < strategies.length; j++) {
+    // Iterate j from i + 1 to avoid self-play and duplicate pairs
     const strat1 = strategies[i];
     const strat2 = strategies[j];
 
@@ -87,14 +97,41 @@ for (let i = 0; i < strategies.length; i++) {
 
     strat1.totalScore += score1;
     strat2.totalScore += score2;
+
+    // Store head-to-head results
+    headToHeadScores[strat1.name][strat2.name] = score1;
+    headToHeadScores[strat2.name][strat1.name] = score2;
   }
+  // Add placeholder for self-play score (optional, could be NaN or null)
+  headToHeadScores[strategies[i].name][strategies[i].name] = NaN;
 }
 
 // Sort strategies by score
 strategies.sort((a, b) => b.totalScore - a.totalScore);
 
-// Print results
-console.log("\nTournament Results:");
-strategies.forEach((strat, index) => {
-  console.log(`${index + 1}. ${strat.name}: ${strat.totalScore} points`);
+// Prepare results for JSON output
+const rankedStrategies = strategies.map((strat, index) => ({
+  rank: index + 1,
+  name: strat.name,
+  totalScore: strat.totalScore,
+}));
+
+const results = {
+  ranking: rankedStrategies,
+  scores: headToHeadScores,
+};
+
+// Write results to JSON file
+const resultsPath = path.join(__dirname, "..", "results.json"); // Save in project root
+try {
+  fs.writeFileSync(resultsPath, JSON.stringify(results, null, 2));
+  console.log(`\nTournament results saved to ${resultsPath}`);
+} catch (error) {
+  console.error(`Error writing results to ${resultsPath}:`, error);
+}
+
+// Print results to console (optional, kept for compatibility)
+console.log("\nTournament Results (Console):");
+rankedStrategies.forEach((strat) => {
+  console.log(`${strat.rank}. ${strat.name}: ${strat.totalScore} points`);
 });
